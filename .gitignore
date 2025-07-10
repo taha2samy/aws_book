@@ -1,0 +1,4 @@
+*.tfstate
+.terraform/
+.vscode/
+*tfstate.backup
