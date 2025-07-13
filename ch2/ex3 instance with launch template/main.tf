@@ -77,11 +77,17 @@ data "aws_ami" "latest_amazon_linux" {
   }
 }
 
-resource "aws_security_group" "sg_ssh" {
+resource "aws_security_group" "sg_ssh_http" {
   vpc_id      = aws_vpc.virtual_private_cloud.id
   name        = "ssh_security_group"
   description = "Allow SSH access"
 
+    ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
   ingress {
     from_port   = 22
     to_port     = 22
@@ -97,15 +103,44 @@ resource "aws_security_group" "sg_ssh" {
   }
 }
 
-resource "aws_instance" "ssh_server" {
-  ami                    = data.aws_ami.latest_amazon_linux.id
-  instance_type          = "t2.micro"
-  key_name               = aws_key_pair.ssh_key.key_name
-  subnet_id              = aws_subnet.public_subnet["public_1a"].id
-  vpc_security_group_ids = [aws_security_group.sg_ssh.id]
 
-  tags = {
-    Name = "SSH Server"
+
+resource "aws_launch_template" "ec2_launch_template" {
+  name_prefix   = "ec2-launch-template-"
+  image_id      = data.aws_ami.latest_amazon_linux.id
+  instance_type = "t2.micro"
+  
+  network_interfaces {
+    subnet_id                   = aws_subnet.public_subnet["public_1a"].id
+    security_groups             = [aws_security_group.sg_ssh_http.id]
+
   }
+  key_name = aws_key_pair.ssh_key.key_name
+
+user_data = base64encode(<<-EOF
+#!/bin/bash
+yum install -y httpd
+systemctl start httpd
+systemctl enable httpd
+echo "<html><body><h1>Hello, World! 22</h1></body></html>" > /var/www/html/index.html
+EOF
+)
+  tags = {
+    Name = "EC2 Launch Template"
+    
+  }
+  
 }
 
+
+
+
+resource "aws_instance" "just_example" {
+  launch_template {
+    id      = aws_launch_template.ec2_launch_template.id
+    version = "1"
+  }
+  tags = {
+    Name = "EC2 Instance"
+  }
+}
