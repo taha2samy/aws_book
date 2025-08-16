@@ -24,8 +24,8 @@ resource "local_file" "ssh_key" {
 
 resource "aws_vpc" "virtual_private_cloud" {
   cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
+  enable_dns_support   = false
+  enable_dns_hostnames = false
 }
 
 resource "aws_subnet" "public_subnet" {
